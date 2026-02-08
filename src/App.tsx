@@ -1,8 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
-const VALENTINE_NAME = import.meta.env.VITE_VALENTINE_NAME || 'Beautiful'
 const LANGUAGE = import.meta.env.VITE_LANGUAGE || 'EN'
+
+const API_BASE = '' // Vite proxies /api to the backend
+
+async function fetchName(): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/api/name`)
+    const data = await res.json()
+    return data?.name ?? 'Valentine'
+  } catch {
+    return 'Valentine'
+  }
+}
+
+async function setName(name: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/name`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  const data = await res.json()
+  return data?.name ?? name
+}
 
 const translations = {
   EN: {
@@ -53,6 +74,7 @@ interface Sparkle {
 }
 
 function App() {
+  const [valentineName, setValentineName] = useState('Valentine')
   const [noButtonPos, setNoButtonPos] = useState({ x: 0, y: 0 })
   const [initialized, setInitialized] = useState(false)
   const [hearts, setHearts] = useState<Heart[]>([])
@@ -68,6 +90,26 @@ function App() {
   const lastMoveTime = useRef(0)
 
   const FLEE_DISTANCE = 120 // Distance at which button starts fleeing
+
+  // Resolve name: URL param (?name=…) → API → fallback "Valentine". No rebuild, no redeploy.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const fromUrl = params.get('name')?.trim()
+    if (fromUrl) {
+      setValentineName(fromUrl)
+      setName(fromUrl).catch(() => {}) // persist to API so GET returns it
+      return
+    }
+    fetchName().then(setValentineName)
+  }, [])
+
+  // Poll API so when name is set elsewhere (e.g. POST /api/name), UI updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchName().then(setValentineName)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Generate floating hearts
   useEffect(() => {
@@ -229,7 +271,7 @@ function App() {
   }
 
   const getMessage = () => {
-    if (noAttempts === 0) return t.willYouBeMyValentine(VALENTINE_NAME)
+    if (noAttempts === 0) return t.willYouBeMyValentine(valentineName)
     if (noAttempts < 3) return t.areYouSure
     if (noAttempts < 6) return t.prettyPlease
     if (noAttempts < 10) return t.wontGiveUp
@@ -261,7 +303,7 @@ function App() {
           <div className="big-heart">💖</div>
           <h1 className="celebration-title">{t.yay}</h1>
           <p className="celebration-text">
-            {t.knewYoudSayYes(VALENTINE_NAME)}
+            {t.knewYoudSayYes(valentineName)}
           </p>
           <p className="celebration-subtext">
             {t.happiestPerson}
@@ -343,7 +385,7 @@ function App() {
           <div className="letter">
             <div className="letter-decoration">✨ 💌 ✨</div>
             <h1 className="title">
-              <span className="name">{VALENTINE_NAME}</span>
+              <span className="name">{valentineName}</span>
               <br />
               <span className="question">{getMessage()}</span>
             </h1>
@@ -385,6 +427,7 @@ function App() {
       <div className="corner-decoration top-right">💕</div>
       <div className="corner-decoration bottom-left">💕</div>
       <div className="corner-decoration bottom-right">💕</div>
+
     </div>
   )
 }

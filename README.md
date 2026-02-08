@@ -5,7 +5,7 @@ A playful, interactive Valentine's Day invitation where the "No" button is just 
 ## Features
 
 - **Runaway "No" Button** - The "No" button detects when your cursor gets close and flees to a new position, making it impossible to reject
-- **Personalized Message** - Customize the recipient's name via environment variable
+- **Personalized Message** - Set the recipient's name via URL (`?name=Ananya`), the in-page form, or the API—no rebuild or redeploy
 - **Multi-language Support** - Available in English and Danish
 - **Beautiful Animations**
   - Floating heart emojis drifting across the screen
@@ -44,18 +44,14 @@ A playful, interactive Valentine's Day invitation where the "No" button is just 
    npm install
    ```
 
-3. Configure your `.env` file:
-   ```env
-   VITE_VALENTINE_NAME=Your Valentine's Name
-   VITE_LANGUAGE=EN
-   ```
+3. (Optional) Set language in `.env`: `VITE_LANGUAGE=EN` or `VITE_LANGUAGE=DA`.
 
-4. Start the development server:
+4. Start the development server (runs the name API + Vite):
    ```bash
    npm run dev
    ```
 
-5. Open http://localhost:5173 in your browser
+5. Open http://localhost:5173 in your browser. Use **http://localhost:5173/?name=Ananya** to set the name via URL.
 
 ### Build for Production
 
@@ -65,11 +61,21 @@ npm run build
 
 The built files will be in the `dist` folder, ready to deploy to any static hosting service.
 
+## Dynamic name (no redeploy)
+
+The card name is **dynamic**. No env vars or rebuilds needed.
+
+| Method | Example |
+|--------|--------|
+| **URL param** | `yoursite.com/?name=Ananya` |
+| **API** | `GET /api/name` returns `{ "name": "…" }`. `POST /api/name` with body `{ "name": "Ananya" }` sets it. The UI polls the API every 5s so changes show up. |
+
+Fallback when no name is set: **Valentine**.
+
 ## Configuration
 
 | Variable | Description | Default | Options |
 |----------|-------------|---------|---------|
-| `VITE_VALENTINE_NAME` | The name displayed in the invitation | `Beautiful` | Any string |
 | `VITE_LANGUAGE` | UI language | `EN` | `EN`, `DA` |
 
 ## How It Works
@@ -97,13 +103,11 @@ The more times you try to click "No", the more desperate the messages become!
 
 ## Deployment
 
-This is a static site that can be deployed anywhere:
+- **Static (URL-only name)**  
+  Deploy the Vite build (`npm run build` → `dist/`) to Vercel, Netlify, or GitHub Pages. The name can still be set via the URL: `yoursite.com/?name=Ananya`. No API needed.
 
-- **Vercel**: `npm i -g vercel && vercel`
-- **Netlify**: Drag and drop the `dist` folder
-- **GitHub Pages**: Use the `gh-pages` package or GitHub Actions
-
-Remember to set your environment variables in your hosting platform's settings.
+- **With dynamic name API**  
+  Deploy the frontend and run `server.js` (e.g. on the same host or a small Node server) so `GET/POST /api/name` work. Point the frontend’s `/api` proxy to that server in production.
 
 ## License
 
