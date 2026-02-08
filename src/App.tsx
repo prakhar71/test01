@@ -5,13 +5,16 @@ const LANGUAGE = import.meta.env.VITE_LANGUAGE || 'EN'
 
 const API_BASE = '' // Vite proxies /api to the backend
 
-async function fetchName(): Promise<string> {
+/** Returns name when API responds OK; null when API is unavailable (e.g. static host). */
+async function fetchName(): Promise<string | null> {
   try {
     const res = await fetch(`${API_BASE}/api/name`)
+    if (!res.ok) return null
     const data = await res.json()
-    return data?.name ?? 'Valentine'
+    const name = data?.name?.trim()
+    return name || null
   } catch {
-    return 'Valentine'
+    return null
   }
 }
 
@@ -97,16 +100,18 @@ function App() {
     const fromUrl = params.get('name')?.trim()
     if (fromUrl) {
       setValentineName(fromUrl)
-      setName(fromUrl).catch(() => {}) // persist to API so GET returns it
+      setName(fromUrl).catch(() => {}) // persist to API so GET returns it (no-op on static host)
       return
     }
-    fetchName().then(setValentineName)
+    fetchName().then(name => setValentineName(name ?? 'Valentine'))
   }, [])
 
-  // Poll API so when name is set elsewhere (e.g. POST /api/name), UI updates
+  // Poll API only when API is available; never overwrite with fallback when API fails (e.g. on GitHub Pages)
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchName().then(setValentineName)
+      fetchName().then(name => {
+        if (name !== null) setValentineName(name)
+      })
     }, 5000)
     return () => clearInterval(interval)
   }, [])
